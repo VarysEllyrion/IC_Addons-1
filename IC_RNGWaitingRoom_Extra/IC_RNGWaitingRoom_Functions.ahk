@@ -115,7 +115,7 @@ class IC_RNGWaitingRoom_Functions
                     this.WaitedForEllywickThisRun := true
                     success := this.IsSuccess()
                     this.SetStatus(this.GetResultString(success))
-                    bonusGems := ActiveEffectKeySharedFunctions.Ellywick.EllywickCallOfTheFeywildHandler.ReadGemMult()
+                    bonusGems := this.ReadGemMult()
                     g_SharedData.RNGWR_UpdateStats(bonusGems, this.Redraws, success)
                 }
                 else if (numCards < 5)
@@ -126,7 +126,7 @@ class IC_RNGWaitingRoom_Functions
                 this.WaitedForEllywickThisRun := true
                 success := this.IsSuccess()
                 this.SetStatus(this.GetResultString(success))
-                bonusGems := ActiveEffectKeySharedFunctions.Ellywick.EllywickCallOfTheFeywildHandler.ReadGemMult()
+                bonusGems := this.ReadGemMult()
                 g_SharedData.RNGWR_UpdateStats(bonusGems, this.Redraws, success)
             }
             this.UpdateRedraws()
@@ -180,13 +180,7 @@ class IC_RNGWaitingRoom_Functions
 
         GetNumCards()
         {
-            size := g_SF.Memory.ActiveEffectKeyHandler.EllywickCallOfTheFeywildHandler.deckOfManyThingsHandler.cardsInHand.size.Read()
-            if (size == "" && this.IsEllyWickOnTheField())
-            {
-                g_SF.Memory.ActiveEffectKeyHandler.Refresh()
-                size := g_SF.Memory.ActiveEffectKeyHandler.EllywickCallOfTheFeywildHandler.deckOfManyThingsHandler.cardsInHand.size.Read()
-            }
-            return size == "" ? 0 : size
+            return this.ReadCardsInHand().Length()
         }
 
         GetNumGemCards()
@@ -197,7 +191,7 @@ class IC_RNGWaitingRoom_Functions
         GetNumCardsOfType(cardType := 3)
         {
             numCards := 0
-            cards := ActiveEffectKeySharedFunctions.Ellywick.EllywickCallOfTheFeywildHandler.ReadCardsInHand()
+            cards := this.ReadCardsInHand()
             for _, cardTypeInHand in cards
             {
                 if (cardTypeInHand == cardType)
@@ -278,6 +272,62 @@ class IC_RNGWaitingRoom_Functions
                 this.UsedUlt := false
             if (this.IsEllyWickOnTheField() && !this.IsEllywickUltReady())
                 this.UseDMUlt()
+        }
+
+        ; Memory reads
+
+        ConvertToArray(serverStatValue)
+        {
+            array := []
+            while (serverStatValue >= 1)
+            {
+                num := Mod(serverStatValue, 10)
+                serverStatValue /= 10
+                if (num > 0)
+                    array.Push(num)
+            }
+            return array
+        }
+
+        ReadCardsInHand(toArray := true)
+        {
+            if (!IsObject(g_SF.Memory.GameManager.game.gameInstances.StatHandler.EllywickHandOfCards))
+            {
+                g_SF.Memory.GameManager.game.gameInstances.StatHandler.EllywickHandOfCards := New GameObjectStructure(g_SF.Memory.GameManager.game.gameInstances.StatHandler,"Int", [0x2c0])
+                g_SF.Memory.GameManager.game.gameInstances.ResetCollections()
+            }
+            serverStat := g_SF.Memory.GameManager.game.gameInstances[g_SF.Memory.GameInstance].StatHandler.EllywickHandOfCards.Read()
+            return toArray ? this.ConvertToArray(serverStat) : serverStat
+        }
+
+        ReadCardsDrawnThisAdventure()
+        {
+            if (!IsObject(g_SF.Memory.GameManager.game.gameInstances.StatHandler.EllywickCardsDrawnThisAdventure))
+            {
+                g_SF.Memory.GameManager.game.gameInstances.StatHandler.EllywickCardsDrawnThisAdventure := New GameObjectStructure(g_SF.Memory.GameManager.game.gameInstances.StatHandler,"Int", [0x2c4])
+                g_SF.Memory.GameManager.game.gameInstances.ResetCollections()
+            }
+            return g_SF.Memory.GameManager.game.gameInstances[g_SF.Memory.GameInstance].StatHandler.EllywickCardsDrawnThisAdventure.Read()
+        }
+
+        ReadGemMult()
+        {
+            if (!IsObject(g_SF.Memory.GameManager.game.gameInstances.StatHandler.EllywickGemMult))
+            {
+                g_SF.Memory.GameManager.game.gameInstances.StatHandler.EllywickGemMult := New GameObjectStructure(g_SF.Memory.GameManager.game.gameInstances.StatHandler,"Quad", [0x2c8])
+                g_SF.Memory.GameManager.game.gameInstances.ResetCollections()
+            }
+            return g_SF.Memory.GameManager.game.gameInstances[g_SF.Memory.GameInstance].StatHandler.EllywickGemMult.Read()
+        }
+
+        ReadCardsInHandNames()
+        {
+            cards := this.ReadCardsInHand()
+            size := cards.Length()
+            namedCards := []
+            Loop, %size%
+                namedCards.push(ActiveEffectKeySharedFunctions.Ellywick.EllywickCallOfTheFeywildHandler.CardType[cards[A_Index]])
+            return namedCards
         }
     }
 
